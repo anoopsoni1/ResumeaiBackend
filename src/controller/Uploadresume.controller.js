@@ -125,9 +125,12 @@ export const aiEditResume = Asynchandler(async (req, res) => {
 
   const finalInstruction =
     "Rewrite this resume to be more professional, fix grammar, and make it ATS friendly. Keep all factual content but improve wording.";
-
+   
   const prompt = `
 You are a professional resume editor AI.
+IMPORTANT:
+i want you to return only the edited text not any other text.
+Do not add asterisk or any other symbol in the beginning or end of the text.
 
 Instruction: ${finalInstruction}
 

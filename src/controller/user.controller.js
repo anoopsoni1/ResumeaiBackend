@@ -1,7 +1,7 @@
 import {Asynchandler} from "../utils/Asynchandler.js"
 import {ApiResponse}  from "../utils/Apiresponse.js"
-import {ApiError} from '../utils/Apierror.js'
- import { User } from "../Models/User.model.js"
+import {ApiError} from '../utils/ApiError.js'
+ import { User } from "../models/User.model.js"
 import  jwt from "jsonwebtoken";
 import bcrypt from "bcrypt" 
 
@@ -92,10 +92,12 @@ const loginuser = Asynchandler(async(req ,res)=>{
 
    const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id)
 
-   const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+   const loggedInUser = await User.findById(user._id).select("-password -refreshtoken")
    const options = {
         httpOnly: true,
-        secure: true
+        // Don't block cookies on http://localhost during dev
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
     }
        return res
     .status(200)
@@ -114,7 +116,8 @@ const logoutUser = Asynchandler(async(req, res) => {
    
   res.clearCookie("accessToken", {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
   });
   res.status(200).json({ message: "Logged out" });
 });

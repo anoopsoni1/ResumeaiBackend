@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt" 
-import  jwt from "jsonwebtoken";
 
 const userschema = new mongoose.Schema({
       FirstName  : {
@@ -14,36 +13,34 @@ const userschema = new mongoose.Schema({
       email : {
         type : String ,
         required : true ,
-        Unique : true ,
+        unique : true ,
       } ,
       password : {
         type : String ,
         required : true ,
       }, 
+      Premium : {
+        type : Boolean ,
+        default : false ,
+      },
        refreshtoken : {
         type : String 
        }
 
 } , {timestamps : true})
-export const User = mongoose.model("User" , userschema)
 
-
-userschema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-
-  try {
-    this.password = await bcrypt.hash(this.password, 10);
-    console.log("Password hashed");
-    next(); 
-  } catch (err) {
-    next(err);
-  }
+// Promise-based hook (avoids "next is not a function" issues)
+userschema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  this.password = await bcrypt.hash(this.password, 10);
 });
-
 
 userschema.methods.isPasswordCorrect = async function(password) {
   return await bcrypt.compare(password, this.password);
 };
+
+// Prevent OverwriteModelError during reload / mixed import paths
+export const User = mongoose.models.User || mongoose.model("User" , userschema)
 
 
 
