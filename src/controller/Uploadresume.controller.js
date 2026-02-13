@@ -1,6 +1,6 @@
 import axios from "axios";
 import mammoth, { extractRawText } from "mammoth";
-import { uploadonCloudinary } from "../utils/cloudinary.js";
+import { uploadonCloudinary } from "../utils/Cloudinary.js";
 import cloudinary from "cloudinary";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
