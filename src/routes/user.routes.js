@@ -11,7 +11,7 @@ const router = Router()
 
 router.route("/register").post(parseFormData , registeruser)
 router.route("/login").post(parseFormData , loginuser)
-router.route("/logout").post( verifyJWT,logoutUser)
+router.route("/logout").post(logoutUser)
 router.route("/profile").get(verifyJWT,getCurrentUser) 
 router.route("/atscheck").post(verifyJWT,CheckATSScore)
 router.route("/upload").post( verifyJWT, upload.single("resume"), UploadResume);
