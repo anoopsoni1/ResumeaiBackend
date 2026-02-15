@@ -6,7 +6,7 @@ const app = express() ;
 
 
 app.use(cors({
-     origin :"http://localhost:5173",
+     origin :["http://localhost:5173","https://resume-ai-frontend-bay.vercel.app"],
     credentials: true
 }))
 
