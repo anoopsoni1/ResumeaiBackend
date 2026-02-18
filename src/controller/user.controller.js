@@ -146,11 +146,18 @@ const updateAccountDetails = Asynchandler(async (req, res) => {
         .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
+const makePremium = Asynchandler(async(req, res) => {
+    const { userId } = req.body;
+    const user = await User.findByIdAndUpdate(userId, { $set: { Premium: true } }, { new: true }).select("-password");
+    return res.status(200).json(new ApiResponse(200, user, "User made premium successfully"));
+});
+
 
 export {
     registeruser,
      loginuser,
      logoutUser,
      getCurrentUser,
-    updateAccountDetails
+    updateAccountDetails,
+    makePremium
 }

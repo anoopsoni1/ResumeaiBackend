@@ -7,6 +7,7 @@ import { aiEditResume, exportResume, UploadResume } from "../controller/Uploadre
 import { Payment, VerifyPayment } from "../controller/payment.controller.js";
  import { verifyJWT } from "../middleware/auth.middleware.js";
  import Mail from "../controller/email.controller.js";
+ import { makePremium } from "../controller/user.controller.js";
 const router = Router()
 
 router.route("/register").post(parseFormData , registeruser)
@@ -20,4 +21,5 @@ router.route("/docx").post( verifyJWT,exportResume)
 router.route("/payment").post( verifyJWT,Payment)
 router.route("/verify-payment").post( verifyJWT,VerifyPayment)
 router.route("/mail").post(Mail)
+router.route("/make-premium").post(makePremium)
 export {router}
