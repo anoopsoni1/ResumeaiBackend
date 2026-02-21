@@ -33,7 +33,7 @@ export const Payment = Asynchandler(async (req, res) => {
     customer_phone: "9999999999"
   },
   order_meta: {
-    return_url: "http://localhost:5173/payment-success"  
+    return_url: "https://resume-ai-frontend-bay.vercel.app/payment-success"  
   }
 };
   try {
