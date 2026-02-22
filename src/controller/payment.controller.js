@@ -30,7 +30,7 @@ export const Payment = Asynchandler(async (req, res) => {
     customer_id:  "cust_" + Date.now(),
     customer_name: name,
     customer_email: email,
-    customer_phone: "9999999999"
+    customer_phone: "+91 9999999999"
   },
   order_meta: {
     return_url: "https://resume-ai-frontend-bay.vercel.app/payment-success"  
