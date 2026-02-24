@@ -1,8 +1,9 @@
-import express from "express" 
+import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser";
+// import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
-const app = express() ;
+const app = express();
 
 
 app.use(cors({
@@ -13,13 +14,13 @@ app.use(cors({
 app.use(express.json({limit: "20kb"}))
 app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use("/public", express.static("public"));
-app.use(cookieParser())
+app.use(cookieParser());
 
-
-
+// Rate limit all API requests (Redis-backed)
+// app.use("/api/v1", rateLimitMiddleware);
 
 import { router } from "./routes/user.routes.js";
 
-app.use("/api/v1/user" , router)
+app.use("/api/v1/user", router);
 
 export {app}

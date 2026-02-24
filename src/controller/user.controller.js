@@ -128,6 +128,26 @@ const logoutUser = Asynchandler(async(req, res) => {
   res.json({ user });
 };
 
+const resetPassword = Asynchandler(async(req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ message: "User not found" });
+    const password = Math.random().toString(36).substring(2, 15);
+    user.password = password;
+    await user.save();
+    return res.status(200).json(new ApiResponse(200, user, "Password reset successfully"));
+});
+
+const forgotPassword = Asynchandler(async(req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ message: "User not found" });
+    const password = Math.random().toString(36).substring(2, 15);
+    user.password = password;
+    await user.save();
+    return res.status(200).json(new ApiResponse(200, user, "Password reset successfully"));
+});
+
 const updateAccountDetails = Asynchandler(async (req, res) => {
     console.log("req.body ", req.body) || {}
     const { email, FirstName } = req.body
@@ -152,6 +172,17 @@ const makePremium = Asynchandler(async(req, res) => {
     return res.status(200).json(new ApiResponse(200, user, "User made premium successfully"));
 });
 
+const makeAdmin = Asynchandler(async(req, res) => {
+    const { userId } = req.body;
+    const user = await User.findByIdAndUpdate(userId, { $set: { isAdmin: true } }, { new: true }).select("-password");
+    return res.status(200).json(new ApiResponse(200, user, "User made admin successfully"));
+});
+ 
+const getallusers = Asynchandler(async(req, res) => {
+    const users = await User.find().select("-password");
+    return res.status(200).json(new ApiResponse(200, users, "All users fetched successfully"));
+});
+
 
 export {
     registeruser,
@@ -159,5 +190,9 @@ export {
      logoutUser,
      getCurrentUser,
     updateAccountDetails,
-    makePremium
+    makePremium,
+    makeAdmin,
+    resetPassword,
+    forgotPassword  ,
+    getallusers
 }

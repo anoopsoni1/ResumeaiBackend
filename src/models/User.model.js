@@ -23,6 +23,10 @@ const userschema = new mongoose.Schema({
         type : Boolean ,
         default : false ,
       },
+      isAdmin : {
+        type : Boolean ,
+        default : false ,
+      },
        refreshtoken : {
         type : String 
        }

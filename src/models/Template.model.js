@@ -1,3 +1,7 @@
+// i want to write schema for template model in mongoose i am uplading a template in img format and you write a schema for it 
+// i want to write schema for template model in mongoose i am uplading a template in img format and you write a schema for it 
+// i want to write schema for template model in mongoose i am uplading a template in img format and you write a schema for it 
+// i want to write schema for template model in mongoose i am uplading a template in img format and you write a schema for it 
 import mongoose from "mongoose";
 
 const templateSchema = new mongoose.Schema(
@@ -7,24 +11,15 @@ const templateSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-
-    html: {
+    image: {
       type: String,
       required: true,
-    },
-
-    css: {
-      type: String,
-      default: "",
-    },
-
-    previewImage: {
-      type: String, // URL or image path
-      required: true,
+      unique: true,
     },
   },
+
   {
-    timestamps: true, // optional but useful
+    timestamps: true,
   }
 );
 

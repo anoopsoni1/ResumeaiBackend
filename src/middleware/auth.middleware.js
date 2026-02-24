@@ -30,4 +30,12 @@ export const verifyJWT = Asynchandler(async(req, _, next) => {
         throw new ApiError(401, error?.message || "Invalid access token")
     }
     
-})
+});
+
+/** Allow only admin users. Must be used after verifyJWT so req.user is set. */
+export const requireAdmin = Asynchandler(async (req, _, next) => {
+    if (!req.user?.isAdmin) {
+        throw new ApiError(403, "Admin access required");
+    }
+    next();
+});
