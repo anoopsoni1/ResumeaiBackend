@@ -2,10 +2,11 @@ const Asynchandler = (fn) => async (req, res, next) => {
   try {
     await fn(req, res, next);
   } catch (error) {
-    console.error("ASYNC HANDLER ERROR:", error);
-
-   
-    const statusCode = error.statusCode || 500;
+    let statusCode = error.statusCode || error.statuscode || 500;
+    if (error.name === "ValidationError") statusCode = 400;
+    if (statusCode >= 500) {
+      console.error("ASYNC HANDLER ERROR:", error);
+    }
 
     res.status(statusCode).json({
       success: false,

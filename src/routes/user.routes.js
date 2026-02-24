@@ -7,20 +7,21 @@ import { aiEditResume, exportResume, UploadResume } from "../controller/Uploadre
 import { Payment, VerifyPayment } from "../controller/payment.controller.js";
  import { verifyJWT, requireAdmin } from "../middleware/auth.middleware.js";
  import Mail from "../controller/email.controller.js";
- import { makePremium, makeAdmin, resetPassword, forgotPassword, getallusers } from "../controller/user.controller.js";
+ import { makePremium, makeAdmin, forgotPassword, verifyForgotOtp, resetPasswordAfterOtp, getallusers, updateAccountDetails } from "../controller/user.controller.js";
  import {
     createTemplate,
     getTemplates,
     getTemplateById,
     deleteTemplate,
   } from "../controller/template.controller.js";
+import { createAtsscore, getAtsscore, updateAtsscore, createOptimize, getOptimize, updateOptimize } from "../controller/atsscore.controller.js";
 
 const router = Router()
 
 router.route("/register").post(parseFormData , registeruser)
 router.route("/login").post(parseFormData , loginuser)
 router.route("/logout").post(logoutUser)
-router.route("/profile").get(verifyJWT,getCurrentUser) 
+router.route("/profile").get(verifyJWT, getCurrentUser).patch(verifyJWT, updateAccountDetails) 
 router.route("/atscheck").post(verifyJWT,CheckATSScore)
 router.route("/upload").post( verifyJWT, upload.single("resume"), UploadResume);
 router.route("/aiedit").post( verifyJWT,aiEditResume)
@@ -32,7 +33,14 @@ router.route("/make-premium").post(makePremium)
 router.route("/templates").post(upload.single("image"), createTemplate).get(getTemplates)
 router.route("/templates/:id").get(getTemplateById).delete(deleteTemplate)
 router.route("/make-admin").post(makeAdmin)
-router.route("/reset-password").post(resetPassword)
 router.route("/forgot-password").post(forgotPassword)
+router.route("/verify-forgot-otp").post(verifyForgotOtp)
+router.route("/reset-password").post(resetPasswordAfterOtp)
 router.route("/get-all-users").get(verifyJWT, requireAdmin, getallusers)
+router.route("/create-atsscore").post(verifyJWT, createAtsscore)
+router.route("/get-atsscore").get(verifyJWT, getAtsscore)
+router.route("/update-atsscore/:id").put(verifyJWT, updateAtsscore)
+router.route("/create-optimize").post(verifyJWT, createOptimize)
+router.route("/get-optimize").get(verifyJWT, getOptimize)
+router.route("/update-optimize/:id").put(verifyJWT, updateOptimize)
 export {router}

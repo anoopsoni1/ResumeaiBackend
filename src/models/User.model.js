@@ -17,7 +17,14 @@ const userschema = new mongoose.Schema({
       } ,
       password : {
         type : String ,
-        required : true ,
+        required : [true, "Password is required"],
+        minlength : [8, "Password must be at least 8 characters"],
+        validate : {
+          validator : function (v) {
+            return /^(?=.*[a-zA-Z])(?=.*\d).+$/.test(v);
+          },
+          message : "Password must contain at least one letter and one number",
+        },
       }, 
       Premium : {
         type : Boolean ,
@@ -29,9 +36,11 @@ const userschema = new mongoose.Schema({
       },
        refreshtoken : {
         type : String 
-       }
+       },
+      forgotPasswordOtp : { type : String },
+      forgotPasswordOtpExpiresAt : { type : Date }
 
-} , {timestamps : true})
+} , { timestamps : true, validateBeforeSave: true })
 
 // Promise-based hook (avoids "next is not a function" issues)
 userschema.pre("save", async function () {
@@ -40,6 +49,7 @@ userschema.pre("save", async function () {
 });
 
 userschema.methods.isPasswordCorrect = async function(password) {
+  if (!password || !this.password) return false;
   return await bcrypt.compare(password, this.password);
 };
 
