@@ -94,9 +94,10 @@ const loginuser = Asynchandler(async(req ,res)=>{
 
       if(!user) throw new ApiError(400 , "User does not exist")
 
-
-             
-
+      const isPasswordValid = await user.isPasswordCorrect(password);
+      if (!isPasswordValid) {
+        throw new ApiError(400, "Invalid email or password");
+      }
    const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id)
 
    const loggedInUser = await User.findById(user._id).select("-password -refreshtoken")

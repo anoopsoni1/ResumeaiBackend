@@ -19,7 +19,19 @@ const storage = multer.diskStorage({
   },
 });
 
- export const upload = multer
- ({
-     storage
-  })
+export const upload = multer({ storage });
+
+/** Use for interview recording uploads: accept video/audio, generous size, no default reject. */
+export const uploadRecording = multer({
+  storage,
+  limits: { fileSize: 500 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const m = file.mimetype || "";
+    const ok =
+      !m ||
+      m.startsWith("video/") ||
+      m.startsWith("audio/") ||
+      m === "application/octet-stream";
+    cb(null, !!ok);
+  },
+});

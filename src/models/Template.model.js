@@ -16,6 +16,13 @@ const templateSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    /** "resume" → Resume design page; "portfolio" → Portfolio design page */
+    type: {
+      type: String,
+      enum: ["resume", "portfolio"],
+      default: "resume",
+      trim: true,
+    },
   },
 
   {

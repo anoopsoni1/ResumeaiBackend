@@ -2,10 +2,11 @@ import { Router } from "express";
 import { getCurrentUser, loginuser, logoutUser, registeruser } from "../controller/user.controller.js";
 import parseFormData from "../middleware/parse.middlerware.js";
 import {CheckATSScore} from "../controller/atschecker.controller.js"
-import {upload} from "../middleware/multer.middleware.js"
+import { upload, uploadRecording as multerRecording } from "../middleware/multer.middleware.js"
 import { aiEditResume, exportResume, UploadResume } from "../controller/Uploadresume.controller.js";
 import { Payment, VerifyPayment } from "../controller/payment.controller.js";
  import { verifyJWT, requireAdmin } from "../middleware/auth.middleware.js";
+ import { uploadAudioToCloudinary } from "../utils/Cloudinary.js";
  import Mail from "../controller/email.controller.js";
  import { makePremium, makeAdmin, forgotPassword, verifyForgotOtp, resetPasswordAfterOtp, getallusers, updateAccountDetails } from "../controller/user.controller.js";
  import {
@@ -15,6 +16,11 @@ import { Payment, VerifyPayment } from "../controller/payment.controller.js";
     deleteTemplate,
   } from "../controller/template.controller.js";
 import { createAtsscore, getAtsscore, updateAtsscore, createOptimize, getOptimize, updateOptimize } from "../controller/atsscore.controller.js";
+import { createInterview, getMyInterviews, getInterviewById, updateInterview } from "../controller/videocallInterview.controller.js";
+import { uploadRecording } from "../middleware/audio.middleware.js";
+import { getNextAiQuestion } from "../controller/aiInterview.controller.js";
+import { transcribeAudio } from "../controller/transcription.controller.js";
+import { evaluateInterview } from "../controller/Audiocheck.controller.js";
 
 const router = Router()
 
@@ -43,4 +49,11 @@ router.route("/update-atsscore/:id").put(verifyJWT, updateAtsscore)
 router.route("/create-optimize").post(verifyJWT, createOptimize)
 router.route("/get-optimize").get(verifyJWT, getOptimize)
 router.route("/update-optimize/:id").put(verifyJWT, updateOptimize)
+router.route("/upload-audio").post(upload.single("audio"), uploadAudioToCloudinary)
+router.route("/interviews").post(verifyJWT, createInterview).get(verifyJWT, getMyInterviews)
+router.route("/interviews/:id").get(verifyJWT, getInterviewById).put(verifyJWT, updateInterview)
+router.route("/interviews/:id/upload-recording").post(verifyJWT, multerRecording.single("recording"), uploadRecording)
+router.route("/interviews/:id/ai-question").post(verifyJWT, getNextAiQuestion)
+router.route("/transcribe").post(verifyJWT, transcribeAudio)
+router.route("/evaluate-interview").post(verifyJWT, evaluateInterview)
 export {router}

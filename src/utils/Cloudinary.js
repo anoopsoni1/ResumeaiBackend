@@ -28,10 +28,10 @@ const uploadonCloudinary = async (localFilePath) => {
     }
 }
 
-/** Upload template image to Cloudinary (folder: templates, resource_type: image) */
+/** Upload template image to Cloudinary (folder: templates, resource_type: image). Returns { response } or { error }. */
 const uploadTemplateImage = async (localFilePath) => {
   try {
-    if (!localFilePath) return null;
+    if (!localFilePath) return { error: "No file path" };
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "image",
       folder: "templates",
@@ -40,13 +40,38 @@ const uploadTemplateImage = async (localFilePath) => {
     if (fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }
-    return response;
+    return { response };
   } catch (error) {
+    if (localFilePath && fs.existsSync(localFilePath)) {
+      try {
+        fs.unlinkSync(localFilePath);
+      } catch {}
+    }
+    const msg = error?.message || "Upload failed";
+    const httpCode = error?.http_code;
+    return { error: msg, httpCode };
+  }
+};
+
+// upload audio to cloudinary
+const uploadAudioToCloudinary = async (localFilePath) => {
+  try {
+    if (!localFilePath) return null;
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: "audio",
+      folder: "audios",
+      access_mode: "public",
+    });
+    if (fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
+    return response;
+  }
+  catch (error) {
     if (localFilePath && fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }
     return null;
   }
-};
-
-export { uploadonCloudinary, uploadTemplateImage };
+}
+export { uploadonCloudinary, uploadTemplateImage, uploadAudioToCloudinary };
