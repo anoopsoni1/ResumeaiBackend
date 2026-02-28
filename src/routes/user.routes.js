@@ -21,6 +21,8 @@ import { uploadRecording } from "../middleware/audio.middleware.js";
 import { getNextAiQuestion } from "../controller/aiInterview.controller.js";
 import { transcribeAudio } from "../controller/transcription.controller.js";
 import { evaluateInterview } from "../controller/Audiocheck.controller.js";
+import { createDetail, getDetail, updateDetail, deleteDetail } from "../controller/details.controller.js";
+import { getEditedResume, saveEditedResume } from "../controller/editedResume.controller.js";
 
 const router = Router()
 
@@ -56,4 +58,11 @@ router.route("/interviews/:id/upload-recording").post(verifyJWT, multerRecording
 router.route("/interviews/:id/ai-question").post(verifyJWT, getNextAiQuestion)
 router.route("/transcribe").post(verifyJWT, transcribeAudio)
 router.route("/evaluate-interview").post(verifyJWT, evaluateInterview)
+router.route("/create-detail").post(verifyJWT, createDetail)
+router.route("/get-detail").get(verifyJWT, getDetail)
+router.route("/update-detail/:id").put(verifyJWT, updateDetail)
+router.route("/delete-detail/:id").delete(verifyJWT, deleteDetail)
+router.route("/get-edited-resume").get(verifyJWT, getEditedResume)
+router.route("/save-edited-resume").post(verifyJWT, saveEditedResume)
+
 export {router}
