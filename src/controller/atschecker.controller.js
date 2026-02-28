@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/Apiresponse.js";
 
 dotenv.config();
 
-
+const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const CheckATSScore = Asynchandler(async (req, res) => {
   const { resumeText, jobDescription } = req.body;
@@ -16,14 +16,7 @@ const CheckATSScore = Asynchandler(async (req, res) => {
       .json({ message: "resumeText and jobDescription are required" });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey?.trim()) {
-    console.error("ATS check: GEMINI_API_KEY is missing");
-    return res.status(503).json({ message: "ATS service is not configured. Please set GEMINI_API_KEY." });
-  }
-
   try {
-    const client = new GoogleGenAI({ apiKey });
     const prompt = `You are an expert Applicant Tracking System (ATS) evaluator. Your task is to assess how well a resume matches a job description and produce a fair, consistent, and accurate score from 0 to 100.
 
 ## Scoring criteria (use these to compute the final score)
@@ -62,22 +55,19 @@ ${resumeText}
 `;
 
     const result = await client.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: prompt,
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
     });
 
     let raw =
-      (typeof result.text === "string" ? result.text : null) ??
-      result.candidates?.[0]?.content?.parts?.map((p) => (p && typeof p.text === "string" ? p.text : "")).join("") ??
+      result.text ??
+      result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") ??
       "";
-
-    if (!raw || !raw.trim()) {
-      const blockReason = result.promptFeedback?.blockReason ?? result.candidates?.[0]?.finishReason;
-      console.error("ATS check: empty Gemini response", { blockReason, hasCandidates: !!result.candidates?.length });
-      return res.status(502).json({
-        message: "ATS evaluation returned no content. Try again or use a different resume/job description.",
-      });
-    }
 
     raw = raw.replace(/```json/g, "").replace(/```/g, "").trim();
 
@@ -91,50 +81,22 @@ ${resumeText}
         .json({ message: "Failed to parse ATS JSON from Gemini" });
     }
 
-    const score =
-      typeof parsed.score === "number"
-        ? Math.round(Math.max(0, Math.min(100, parsed.score)))
-        : typeof parsed.score === "string"
-          ? Math.round(Math.max(0, Math.min(100, parseFloat(parsed.score) || 0)))
-          : 0;
-
-    const matchedSkills = Array.isArray(parsed.matchedSkills)
-      ? parsed.matchedSkills.filter((s) => typeof s === "string").slice(0, 15)
-      : [];
-    const missingSkills = Array.isArray(parsed.missingSkills)
-      ? parsed.missingSkills.filter((s) => typeof s === "string").slice(0, 15)
-      : [];
-    const summary =
-      typeof parsed.summary === "string" ? parsed.summary : "";
-    const improvementSuggestions = Array.isArray(parsed.improvementSuggestions)
-      ? parsed.improvementSuggestions.filter((s) => typeof s === "string").slice(0, 5)
-      : [];
-
     return res.json(
       new ApiResponse(
         200,
         {
-          score,
-          matchedSkills,
-          missingSkills,
-          summary,
-          improvementSuggestions,
+          score: parsed.score,
+          matchedSkills: parsed.matchedSkills,
+          missingSkills: parsed.missingSkills,
+          summary: parsed.summary,
+          improvementSuggestions: parsed.improvementSuggestions,
         },
         "ATS score generated successfully"
       )
     );
   } catch (err) {
-    console.error("Gemini ATS error:", err?.message ?? err);
-    const msg = err?.message ?? "";
-    if (msg.includes("API key") || msg.includes("401") || msg.includes("403")) {
-      return res.status(503).json({ message: "ATS service authentication failed. Check GEMINI_API_KEY." });
-    }
-    if (msg.includes("429") || msg.includes("quota") || msg.includes("rate")) {
-      return res.status(429).json({ message: "ATS service is busy. Please try again in a moment." });
-    }
-    return res.status(500).json({
-      message: "Error generating ATS score. Please try again.",
-    });
+    console.error("Gemini ATS error:", err);
+    return res.status(500).json({ message: "Error generating ATS score" });
   }
 });
 
