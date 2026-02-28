@@ -42,10 +42,22 @@ const updateDetail = Asynchandler(async (req, res) => {
     const userId = req.user?._id;
     const detail = await Detail.findOne({ _id: id, userId });
     if (!detail) return res.status(404).json({ message: "Detail not found" });
+    const payload = {
+        name: (name != null && String(name).trim()) ? String(name).trim() : "Your Name",
+        role: (role != null && String(role).trim()) ? String(role).trim() : "Your Role",
+        summary: summary != null ? String(summary).trim() : "",
+        skills: Array.isArray(skills) ? skills.map((s) => String(s).trim()).filter(Boolean) : [],
+        experience: Array.isArray(experience) ? experience.map((e) => (e != null ? String(e).trim() : "")) : [],
+        projects: Array.isArray(projects) ? projects.map((p) => (p != null ? String(p).trim() : "")) : [],
+        education: education != null ? String(education).trim() : "",
+        languageProficiency: languageProficiency != null ? String(languageProficiency).trim() : "",
+        email: email != null ? String(email).trim() : "",
+        phone: phone != null ? String(phone).trim() : "",
+    };
     const updatedDetail = await Detail.findByIdAndUpdate(
         id,
-        { name, role, summary, skills, experience, projects, education, languageProficiency, email, phone },
-        { new: true }
+        payload,
+        { new: true, runValidators: true }
     );
     return res.status(200).json(new ApiResponse(200, updatedDetail, "Detail updated successfully"));
 });

@@ -4,10 +4,12 @@ const detailSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
+        default: "Your Name",
     },
     role: {
         type: String,
         required: true,
+        default: "Your Role",
     },
     summary: {
         type: String,
