@@ -1,41 +1,68 @@
 // import Redis from "ioredis";
-// import { RateLimiterRedis } from "rate-limiter-flexible";
-// // Redis client - use REDIS_URL or REDIS_HOST + REDIS_PORT from env
-// const getRedisConfig = () => {
-//   if (process.env.REDIS_URL) {
-//     return process.env.REDIS_URL;
-//   }
+// import { RateLimiterRedis, RateLimiterMemory } from "rate-limiter-flexible";
+
+// const points = parseInt(process.env.RATE_LIMIT_POINTS || "100", 10);
+// const duration = parseInt(process.env.RATE_LIMIT_DURATION || "60", 10);
+// const blockDuration = parseInt(process.env.RATE_LIMIT_BLOCK_DURATION || "60", 10);
+
+// function getRedisConfig() {
+//   if (process.env.REDIS_URL) return process.env.REDIS_URL;
 //   const host = process.env.REDIS_HOST || "127.0.0.1";
 //   const port = parseInt(process.env.REDIS_PORT || "6379", 10);
 //   const password = process.env.REDIS_PASSWORD || undefined;
 //   return { host, port, password };
-// };
+// }
 
-// const redisConfig = getRedisConfig();
-// const redisClient =
-//   typeof redisConfig === "string"
-//     ? new Redis(redisConfig, { enableOfflineQueue: false })
-//     : new Redis({
-//         ...redisConfig,
-//         enableOfflineQueue: false,
+// function createMemoryLimiter() {
+//   return {
+//     limiter: new RateLimiterMemory({
+//       keyPrefix: "rl_api",
+//       points,
+//       duration,
+//       blockDuration,
+//     }),
+//     points,
+//   };
+// }
+
+// function createRateLimiter() {
+//   const redisUrl = process.env.REDIS_URL;
+//   const redisHost = process.env.REDIS_HOST;
+
+//   if (redisUrl || redisHost) {
+//     try {
+//       const redisConfig = getRedisConfig();
+//       const redisClient =
+//         typeof redisConfig === "string"
+//           ? new Redis(redisConfig, { enableOfflineQueue: false })
+//           : new Redis({ ...redisConfig, enableOfflineQueue: false });
+
+//       redisClient.on("error", (err) => {
+//         console.error("[RateLimit] Redis error:", err.message);
 //       });
 
-// // Optional: handle Redis errors so app doesn't crash if Redis is down
-// redisClient.on("error", (err) => {
-//   console.error("Rate limiter Redis client error:", err.message);
-// });
+//       return {
+//         limiter: new RateLimiterRedis({
+//           storeClient: redisClient,
+//           keyPrefix: "rl_api",
+//           points,
+//           duration,
+//           blockDuration,
+//         }),
+//         points,
+//       };
+//     } catch (err) {
+//       console.warn("[RateLimit] Redis init failed, using in-memory:", err.message);
+//     }
+//   }
 
-// const rateLimiter = new RateLimiterRedis({
-//   storeClient: redisClient,
-//   keyPrefix: "rl_api",
-//   points: parseInt(process.env.RATE_LIMIT_POINTS || "100", 10), // requests
-//   duration: parseInt(process.env.RATE_LIMIT_DURATION || "60", 10), // per N seconds (default: 100 req/min)
-//   blockDuration: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION || "60", 10), // block for N seconds when exceeded
-// });
+//   return createMemoryLimiter();
+// }
+
+// const { limiter: rateLimiter, points: limitPoints } = createRateLimiter();
 
 // /**
-//  * Rate limit middleware using Redis.
-//  * Limits by IP (or by req.user._id if authenticated).
+//  * Rate limit middleware. Limits by IP or by req.user._id if authenticated.
 //  * Returns 429 Too Many Requests when limit exceeded.
 //  */
 // export const rateLimitMiddleware = (req, res, next) => {
@@ -44,16 +71,15 @@
 //   rateLimiter
 //     .consume(key)
 //     .then((rateLimiterRes) => {
-//       // Optional: set rate limit headers on response
-//       res.setHeader("X-RateLimit-Limit", rateLimiter.points);
+//       res.setHeader("X-RateLimit-Limit", limitPoints);
 //       res.setHeader("X-RateLimit-Remaining", rateLimiterRes.remainingPoints);
 //       res.setHeader("X-RateLimit-Reset", Math.ceil(rateLimiterRes.msBeforeNext / 1000));
 //       next();
 //     })
 //     .catch((rejRes) => {
 //       if (rejRes instanceof Error) {
-//         console.error("Rate limiter error:", rejRes);
-//         return next(); // allow request if Redis/limiter fails
+//         console.error("[RateLimit] Error:", rejRes.message);
+//         return next();
 //       }
 //       const retryAfter = Math.ceil((rejRes.msBeforeNext || 60000) / 1000);
 //       res.setHeader("Retry-After", retryAfter);

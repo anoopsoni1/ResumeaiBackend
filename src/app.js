@@ -16,7 +16,7 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use("/public", express.static("public"));
 app.use(cookieParser());
 
-// Rate limit all API requests (Redis-backed)
+// Rate limit all API requests (in-memory by default; Redis if REDIS_URL/REDIS_HOST set)
 // app.use("/api/v1", rateLimitMiddleware);
 
 import { router } from "./routes/user.routes.js";

@@ -124,17 +124,21 @@ export const aiEditResume = Asynchandler(async (req, res) => {
   }
 
   const finalInstruction =
-    "Rewrite this resume to be more professional, fix grammar, and make it ATS friendly. Keep all factual content but improve wording.";
+    "Rewrite this resume to maximize ATS score and readability. Fix all grammar, spelling, and punctuation—output must be error-free. Quantify impact: add or strengthen numbers, percentages, and metrics where possible (e.g. 'increased sales by 20%', 'managed team of 5', 'reduced costs by $10K'). Use strong action verbs and industry keywords. Keep section headers clear and consistent (e.g. SUMMARY, EXPERIENCE, SKILLS). Preserve all factual content but improve wording for clarity and impact.";
    
   const prompt = `
-You are a professional resume editor AI.
-IMPORTANT:
-i want you to return only the edited text not any other text.
-Do not add asterisk or any other symbol in the beginning or end of the text.
+You are a professional resume editor focused on ATS (Applicant Tracking System) optimization and impact. Your task is to improve the resume text below so it scores higher with ATS and reads better to recruiters.
+
+RULES (strict):
+- Return ONLY the edited resume text. No introductions, explanations, labels (e.g. "Edited resume:"), or commentary.
+- Do not wrap the text in asterisks, backticks, quotes, or any other symbols.
+- Grammar and spelling: Fix all spelling, punctuation, tense, and sentence structure. Output must be grammatically correct, with proper capitalization and consistent formatting.
+- Quantify impact: Where achievements or responsibilities can be measured, add or suggest numbers—percentages (%), amounts ($), time saved, team size, scale, before/after results. Turn vague claims into concrete, quantified bullets where possible.
+- ATS-friendly: Use clear section headers (e.g. SUMMARY, EXPERIENCE, SKILLS, EDUCATION). Use standard job-related keywords and strong action verbs. Keep formatting simple and consistent. Preserve all factual content (names, dates, companies, roles).
 
 Instruction: ${finalInstruction}
 
-Resume:
+Resume to edit:
 ${resumeText}
   `;
 
