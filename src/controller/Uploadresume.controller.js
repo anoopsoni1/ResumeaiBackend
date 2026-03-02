@@ -113,6 +113,55 @@ try {
 });
 
 
+/** Build plain resume text from structured detail (for backward compatibility / display). */
+function detailToResumeText(d) {
+  if (!d) return "";
+  const lines = [];
+  lines.push((d.name || "").trim() || "Your Name");
+  lines.push((d.role || "").trim() || "Your Role");
+  lines.push("");
+  if ((d.summary || "").trim()) {
+    lines.push("SUMMARY");
+    lines.push(d.summary.trim());
+    lines.push("");
+  }
+  if (Array.isArray(d.skills) && d.skills.length > 0) {
+    const skillList = d.skills.map((s) => (s || "").trim()).filter(Boolean).join("\n");
+    if (skillList) {
+      lines.push("SKILLS");
+      lines.push(skillList);
+      lines.push("");
+    }
+  }
+  if (Array.isArray(d.experience) && d.experience.length > 0) {
+    lines.push("EXPERIENCE");
+    d.experience.forEach((entry) => {
+      if ((entry || "").trim()) lines.push(entry.trim());
+      lines.push("");
+    });
+  }
+  if (Array.isArray(d.projects) && d.projects.length > 0) {
+    const projectTexts = d.projects.map((p) => (p || "").trim()).filter(Boolean);
+    if (projectTexts.length) {
+      lines.push("PROJECTS");
+      projectTexts.forEach((p) => { lines.push(p); lines.push(""); });
+    }
+  }
+  if ((d.education || "").trim()) {
+    lines.push("EDUCATION");
+    lines.push(d.education.trim());
+    lines.push("");
+  }
+  if ((d.languageProficiency || "").trim()) {
+    lines.push("LANGUAGE PROFICIENCY");
+    lines.push(d.languageProficiency.trim());
+    lines.push("");
+  }
+  const contact = [(d.email || "").trim(), (d.phone || "").trim()].filter(Boolean).join(" | ");
+  if (contact) lines.push(contact);
+  return lines.join("\n").trim();
+}
+
 export const aiEditResume = Asynchandler(async (req, res) => {
   const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const { resumeText } = req.body;
@@ -123,24 +172,23 @@ export const aiEditResume = Asynchandler(async (req, res) => {
       .json({ success: false, message: "resumeText is required" });
   }
 
-  const finalInstruction =
-    "Rewrite this resume to maximize ATS score and readability. Fix all grammar, spelling, and punctuation—output must be error-free. Quantify impact: add or strengthen numbers, percentages, and metrics where possible (e.g. 'increased sales by 20%', 'managed team of 5', 'reduced costs by $10K'). Use strong action verbs and industry keywords. Keep section headers clear and consistent (e.g. SUMMARY, EXPERIENCE, SKILLS). Preserve all factual content but improve wording for clarity and impact.";
-   
-  const prompt = `
-You are a professional resume editor focused on ATS (Applicant Tracking System) optimization and impact. Your task is to improve the resume text below so it scores higher with ATS and reads better to recruiters.
+  const prompt = `You are a professional resume editor focused on ATS optimization. Parse the resume text below, improve it (grammar, spelling, quantify impact, strong action verbs, ATS keywords), and return a single JSON object with exactly these keys—no other keys, no markdown, no code fence:
 
-RULES (strict):
-- Return ONLY the edited resume text. No introductions, explanations, labels (e.g. "Edited resume:"), or commentary.
-- Do not wrap the text in asterisks, backticks, quotes, or any other symbols.
-- Grammar and spelling: Fix all spelling, punctuation, tense, and sentence structure. Output must be grammatically correct, with proper capitalization and consistent formatting.
-- Quantify impact: Where achievements or responsibilities can be measured, add or suggest numbers—percentages (%), amounts ($), time saved, team size, scale, before/after results. Turn vague claims into concrete, quantified bullets where possible.
-- ATS-friendly: Use clear section headers (e.g. SUMMARY, EXPERIENCE, SKILLS, EDUCATION). Use standard job-related keywords and strong action verbs. Keep formatting simple and consistent. Preserve all factual content (names, dates, companies, roles).
+- name (string): full name
+- role (string): job title / professional role
+- summary (string): professional summary (1–3 sentences)
+- skills (array of strings): list of skills, one per element
+- experience (array of strings): each element is one job entry as a single string with newlines, e.g. "Job Title\\nCompany Name\\n2020 – Present\\n• Bullet one\\n• Bullet two"
+- projects (array of strings): each element one project description (can include newlines)
+- education (string): education block
+- languageProficiency (string): languages
+- email (string): email address
+- phone (string): phone number
 
-Instruction: ${finalInstruction}
+Rules: Preserve all factual content. Fix grammar and spelling. Quantify impact where possible. Use strong action verbs. Return ONLY valid JSON. All string values must be properly escaped (e.g. newlines as \\n, quotes escaped).
 
-Resume to edit:
-${resumeText}
-  `;
+Resume text to parse and improve:
+${resumeText}`;
 
   const result = await client.models.generateContent({
     model: "gemini-2.5-flash",
@@ -151,16 +199,40 @@ ${resumeText}
       },
     ],
   });
- 
-  const editedText =
+
+  const raw =
     result?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-  if (!editedText) {
+  if (!raw) {
     throw new ApiError(500, "Failed to get response from Gemini");
   }
 
+  let optimizedDetail = null;
+  let cleaned = raw.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/m, "$1").trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  try {
+    const parsed = JSON.parse(cleaned);
+    optimizedDetail = {
+      name: parsed.name != null ? String(parsed.name).trim() || "Your Name" : "Your Name",
+      role: parsed.role != null ? String(parsed.role).trim() || "Your Role" : "Your Role",
+      summary: parsed.summary != null ? String(parsed.summary).trim() : "",
+      skills: Array.isArray(parsed.skills) ? parsed.skills.map((s) => String(s).trim()).filter(Boolean) : [],
+      experience: Array.isArray(parsed.experience) ? parsed.experience.map((e) => (e != null ? String(e).trim() : "")).filter(Boolean) : [],
+      projects: Array.isArray(parsed.projects) ? parsed.projects.map((p) => (p != null ? String(p).trim() : "")).filter(Boolean) : [],
+      education: parsed.education != null ? String(parsed.education).trim() : "",
+      languageProficiency: parsed.languageProficiency != null ? String(parsed.languageProficiency).trim() : "",
+      email: parsed.email != null ? String(parsed.email).trim() : "",
+      phone: parsed.phone != null ? String(parsed.phone).trim() : "",
+    };
+  } catch (e) {
+    console.error("Gemini optimize JSON parse error:", e, raw?.slice(0, 300));
+    throw new ApiError(500, "AI returned invalid format; please try again.");
+  }
+
+  const editedText = detailToResumeText(optimizedDetail);
+
   return res.json(
-    new ApiResponse(200, { editedText }, "Resume edited successfully by AI")
+    new ApiResponse(200, { editedText, optimizedDetail }, "Resume optimized successfully by AI")
   );
 });
 
