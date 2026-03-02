@@ -2,6 +2,8 @@ import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.model.js";
+import { Optimize } from "../models/Optimize.model.js";
+import { Detail } from "../models/Detail.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { Resend } from "resend";
@@ -254,8 +256,20 @@ const makeAdmin = Asynchandler(async(req, res) => {
 });
  
 const getallusers = Asynchandler(async(req, res) => {
-    const users = await User.find().select("-password");
-    return res.status(200).json(new ApiResponse(200, users, "All users fetched successfully"));
+    const users = await User.find().select("-password").lean();
+    const userIds = users.map((u) => u._id);
+    const [optimizeDocs, detailCounts] = await Promise.all([
+        Optimize.find({ userId: { $in: userIds } }).select("userId number").lean(),
+        Detail.aggregate([{ $match: { userId: { $in: userIds } } }, { $group: { _id: "$userId", count: { $sum: 1 } } }]),
+    ]);
+    const optimizeByUser = Object.fromEntries(optimizeDocs.map((o) => [String(o.userId), o.number ?? 0]));
+    const resumeByUser = Object.fromEntries(detailCounts.map((d) => [String(d._id), d.count ?? 0]));
+    const usersWithStats = users.map((u) => ({
+        ...u,
+        optimizeCount: optimizeByUser[String(u._id)] ?? 0,
+        resumeCount: resumeByUser[String(u._id)] ?? 0,
+    }));
+    return res.status(200).json(new ApiResponse(200, usersWithStats, "All users fetched successfully"));
 });
 
 
