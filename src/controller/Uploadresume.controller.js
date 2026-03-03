@@ -8,8 +8,6 @@ import { GoogleGenAI } from "@google/genai";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } from "docx";
 import PDFDocument from "pdfkit";
-import { sendGreetingEmail } from "../services/email.service.js";
-
 
 export const UploadResume = Asynchandler(async (req, res) => {
 
@@ -60,7 +58,10 @@ let extractedText = "";
 
 try {
   if (fileType === "application/pdf") {
-    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) });
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(fileBuffer),
+      standardFontDataUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.449/standard_fonts/",
+    });
 
         const pdf = await loadingTask.promise;
         
@@ -98,11 +99,6 @@ try {
     message: "Failed to extract text from resume",
   });
 }
-
-  // Send greeting email (fire-and-forget)
-  if (req.user?.email) {
-    sendGreetingEmail(req.user.email, req.user.FirstName, "resume_upload").catch(() => {});
-  }
 
   return res.json(
     new ApiResponse(
@@ -258,11 +254,6 @@ export const exportResume = Asynchandler(async (req, res) => {
 
   if (!resumeText) {
     return res.status(400).json({ message: "resumeText required" });
-  }
-
-  // Send greeting email when user exports resume (fire-and-forget)
-  if (req.user?.email) {
-    sendGreetingEmail(req.user.email, req.user.FirstName, "resume_export").catch(() => {});
   }
 
   const config = TEMPLATE_CONFIG[template];
