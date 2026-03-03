@@ -1,7 +1,6 @@
-import axios from "axios";
+import fs from "fs";
 import mammoth, { extractRawText } from "mammoth";
 import { uploadonCloudinary } from "../utils/Cloudinary.js";
-import cloudinary from "cloudinary";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { GoogleGenAI } from "@google/genai";
@@ -17,37 +16,24 @@ export const UploadResume = Asynchandler(async (req, res) => {
       message: "No file uploaded",
     });
   }
+
+  // Read file into buffer before upload (Cloudinary may delete local file); use this for OCR/extraction
+  let fileBuffer;
+  try {
+    fileBuffer = fs.readFileSync(req.file.path);
+  } catch (err) {
+    console.error("Read file error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to read uploaded file",
+    });
+  }
+
   const cloudinaryRes = await uploadonCloudinary(req.file.path);
   if (!cloudinaryRes) {
     return res.status(500).json({
       success: false,
       message: "Cloudinary upload failed",
-    });
-  }
-  const signedUrl = cloudinary.v2.utils.private_download_url(
-    cloudinaryRes.public_id,
-    cloudinaryRes.format,
-    {
-      resource_type: "raw",
-      ocr: "adv_ocr" ,
-      type: "upload",
-      expires_at: Math.floor(Date.now() / 1000) + 300,
-    }
-  );
-
-  let fileBuffer;
-
-  try {
-    const downloaded = await axios.get(signedUrl, {
-      responseType: "arraybuffer",
-    });
-
-    fileBuffer = Buffer.from(downloaded.data);
-  } catch (err) {
-    console.log("Signed download error:", err.response?.status);
-    return res.status(401).json({
-      success: false,
-      message: "Failed to download RAW file from Cloudinary",
     });
   }
 
@@ -76,20 +62,20 @@ try {
 
   else if (
     fileType ===
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    fileType === "application/msword"
   ) {
     const doc = await mammoth.extractRawText({
-      arrayBuffer: fileBuffer,
+      buffer: fileBuffer,
     });
 
     extractedText = doc.value || "";
   }
 
-
   else {
     return res.status(400).json({
       success: false,
-      message: "Only PDF or DOCX files are supported",
+      message: "Only PDF, DOC, or DOCX files are supported",
     });
   }
 } catch (err) {

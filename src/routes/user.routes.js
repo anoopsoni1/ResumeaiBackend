@@ -23,6 +23,7 @@ import { transcribeAudio } from "../controller/transcription.controller.js";
 import { evaluateInterview } from "../controller/Audiocheck.controller.js";
 import { createDetail, getDetail, updateDetail, deleteDetail } from "../controller/details.controller.js";
 import { getEditedResume, saveEditedResume } from "../controller/editedResume.controller.js";
+import { deployPortfolio, getDeployments, deleteDeployment } from "../controller/deployment.controller.js";
 
 const router = Router()
 
@@ -64,5 +65,8 @@ router.route("/update-detail/:id").put(verifyJWT, updateDetail)
 router.route("/delete-detail/:id").delete(verifyJWT, deleteDetail)
 router.route("/get-edited-resume").get(verifyJWT, getEditedResume)
 router.route("/save-edited-resume").post(verifyJWT, saveEditedResume)
+router.route("/deploy-portfolio").post(verifyJWT, deployPortfolio)
+router.route("/get-deployments").get(verifyJWT, getDeployments)
+router.route("/delete-deployment/:id").delete(verifyJWT, deleteDeployment)
 
 export {router}
