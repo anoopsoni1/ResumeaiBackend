@@ -6,9 +6,9 @@ import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { GoogleGenAI } from "@google/genai";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-
- import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } from "docx";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } from "docx";
 import PDFDocument from "pdfkit";
+import { sendGreetingEmail } from "../services/email.service.js";
 
 
 export const UploadResume = Asynchandler(async (req, res) => {
@@ -99,6 +99,10 @@ try {
   });
 }
 
+  // Send greeting email (fire-and-forget)
+  if (req.user?.email) {
+    sendGreetingEmail(req.user.email, req.user.FirstName, "resume_upload").catch(() => {});
+  }
 
   return res.json(
     new ApiResponse(
@@ -254,6 +258,11 @@ export const exportResume = Asynchandler(async (req, res) => {
 
   if (!resumeText) {
     return res.status(400).json({ message: "resumeText required" });
+  }
+
+  // Send greeting email when user exports resume (fire-and-forget)
+  if (req.user?.email) {
+    sendGreetingEmail(req.user.email, req.user.FirstName, "resume_export").catch(() => {});
   }
 
   const config = TEMPLATE_CONFIG[template];
