@@ -20,6 +20,7 @@ app.use(cookieParser());
 // app.use("/api/v1", rateLimitMiddleware);
 
 import { router } from "./routes/user.routes.js";
+// import { roadmapRouter } from "./routes/roadmap.routes.js";
 
 app.use("/api/v1/user", router);
 

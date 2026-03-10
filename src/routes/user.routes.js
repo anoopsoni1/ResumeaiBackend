@@ -24,7 +24,19 @@ import { evaluateInterview } from "../controller/Audiocheck.controller.js";
 import { createDetail, getDetail, updateDetail, deleteDetail } from "../controller/details.controller.js";
 import { getEditedResume, saveEditedResume } from "../controller/editedResume.controller.js";
 import { deployPortfolio, getDeployments, deleteDeployment } from "../controller/deployment.controller.js";
-
+import { generateRoadmap } from "../controller/roadmap.controller.js";
+import {
+  generateQuestion,
+  generateQuestions,
+  runCode,
+  codeReview,
+  followUpQuestion,
+  getLeaderboard,
+  createCodingInterview,
+  getCodingInterviews,
+  updateCodingInterview,
+  deleteCodingInterview,
+} from "../controller/codingInterview.controller.js";
 const router = Router()
 
 router.route("/register").post(parseFormData , registeruser)
@@ -68,5 +80,16 @@ router.route("/save-edited-resume").post(verifyJWT, saveEditedResume)
 router.route("/deploy-portfolio").post(verifyJWT, deployPortfolio)
 router.route("/get-deployments").get(verifyJWT, getDeployments)
 router.route("/delete-deployment/:id").delete(verifyJWT, deleteDeployment)
-
+router.route("/generate-roadmap").post(generateRoadmap)
+// coding interview: question/run/review (no auth), save/crud (auth)
+router.route("/interview-question").post(generateQuestion)
+router.route("/interview-questions").post(generateQuestions)
+router.route("/run-code").post(runCode)
+router.route("/code-review").post(codeReview)
+router.route("/follow-up").post(followUpQuestion)
+router.route("/leaderboard").get(getLeaderboard)
+router.route("/coding-interview").post(verifyJWT, createCodingInterview)
+router.route("/get-coding-interview").get(verifyJWT, getCodingInterviews)
+router.route("/update-coding-interview/:id").put(verifyJWT, updateCodingInterview)
+router.route("/delete-coding-interview/:id").delete(verifyJWT, deleteCodingInterview)
 export {router}
