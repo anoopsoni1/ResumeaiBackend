@@ -1,10 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
 
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const aiClient = process.env.GROQ_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    })
   : null;
 
 const ROADMAP_JSON_SCHEMA = `
@@ -42,7 +45,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no code fences, no extr
  * Body: { careerGoal, skills, experience, months }
  */
 export const generateRoadmap = Asynchandler(async (req, res) => {
-  if (!genAI) throw new ApiError(503, "AI service not configured (GEMINI_API_KEY)");
+  if (!aiClient) throw new ApiError(503, "AI service not configured (GROQ_API_KEY)");
 
   const { careerGoal, skills, experience, months } = req.body || {};
 
@@ -67,14 +70,15 @@ ${ROADMAP_JSON_SCHEMA}
 
 Generate a practical, phased roadmap with 3-6 phases, 3-5 projects, missing skills to learn, and learning resources (with real or placeholder URLs).`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
   let response;
   try {
-    const result = await model.generateContent(prompt);
-    response = result.response.text();
+    const result = await aiClient.responses.create({
+      model: "openai/gpt-oss-20b",
+      input: prompt,
+    });
+    response = result.output_text || "";
   } catch (err) {
-    console.error("[generateRoadmap] Gemini error:", err?.message || err);
+    console.error("[generateRoadmap] AI error:", err?.message || err);
     throw new ApiError(502, "AI service failed to generate roadmap");
   }
 

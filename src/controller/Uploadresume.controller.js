@@ -3,10 +3,17 @@ import mammoth, { extractRawText } from "mammoth";
 import { uploadonCloudinary } from "../utils/Cloudinary.js";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell } from "docx";
 import PDFDocument from "pdfkit";
+
+const aiClient = process.env.GROQ_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    })
+  : null;
 
 export const UploadResume = Asynchandler(async (req, res) => {
 
@@ -149,7 +156,6 @@ function detailToResumeText(d) {
 }
 
 export const aiEditResume = Asynchandler(async (req, res) => {
-  const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const { resumeText } = req.body;
 
   if (!resumeText) {
@@ -176,18 +182,18 @@ Rules: Preserve all factual content. Fix grammar and spelling. Quantify impact w
 Resume text to parse and improve:
 ${resumeText}`;
 
-  const result = await client.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: prompt }],
-      },
-    ],
+  if (!aiClient) {
+    return res
+      .status(503)
+      .json({ success: false, message: "AI service not configured (GROQ_API_KEY)" });
+  }
+
+  const result = await aiClient.responses.create({
+    model: "openai/gpt-oss-20b",
+    input: prompt,
   });
 
-  const raw =
-    result?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const raw = result.output_text || "";
 
   if (!raw) {
     throw new ApiError(500, "Failed to get response from Gemini");
@@ -211,7 +217,7 @@ ${resumeText}`;
       phone: parsed.phone != null ? String(parsed.phone).trim() : "",
     };
   } catch (e) {
-    console.error("Gemini optimize JSON parse error:", e, raw?.slice(0, 300));
+    console.error("AI optimize JSON parse error:", e, raw?.slice(0, 300));
     throw new ApiError(500, "AI returned invalid format; please try again.");
   }
 

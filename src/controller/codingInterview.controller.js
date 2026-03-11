@@ -1,12 +1,15 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { InterviewSession } from "../models/InterviewSession.model.js";
 import { User } from "../models/User.model.js";
 
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const aiClient = process.env.GROQ_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    })
   : null;
 
 const JUDGE0_BASE = process.env.JUDGE0_BASE_URL || "https://ce.judge0.com";
@@ -32,9 +35,9 @@ function parseJsonFromAi(text) {
   }
 }
 
-/** POST /api/interview/question - Generate coding question via Gemini */
+/** POST /api/interview/question - Generate coding question via OpenAI (Groq) */
 export const generateQuestion = Asynchandler(async (req, res) => {
-  if (!genAI) throw new ApiError(503, "AI service not configured (GEMINI_API_KEY)");
+  if (!aiClient) throw new ApiError(503, "AI service not configured (GROQ_API_KEY)");
   const { role, difficulty } = req.body || {};
   if (!role || !difficulty) throw new ApiError(400, "role and difficulty are required");
 
@@ -64,9 +67,11 @@ Return ONLY valid JSON (no markdown, no code fences):
 
 Include 3-5 test cases. Make description clear and examples helpful. For Beginner, keep inputs and logic very simple.`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const result = await aiClient.responses.create({
+    model: "openai/gpt-oss-20b",
+    input: prompt,
+  });
+  const text = result.output_text || "";
   const data = parseJsonFromAi(text);
   if (!data || !data.title) throw new ApiError(502, "AI returned invalid question format");
 
@@ -89,7 +94,7 @@ const QUESTION_COUNT = 15;
 
 /** POST /api/interview-questions - Generate multiple questions (e.g. 15 for full interview) */
 export const generateQuestions = Asynchandler(async (req, res) => {
-  if (!genAI) throw new ApiError(503, "AI service not configured (GEMINI_API_KEY)");
+  if (!aiClient) throw new ApiError(503, "AI service not configured (GROQ_API_KEY)");
   const { role, difficulty } = req.body || {};
   const count = Math.min(Math.max(Number(req.body?.count) || QUESTION_COUNT, 1), 20);
   if (!role || !difficulty) throw new ApiError(400, "role and difficulty are required");
@@ -121,9 +126,11 @@ Return ONLY valid JSON (no markdown, no code fences):
 }
 Each question must be unique. Include 2-4 test cases per question. For Beginner keep each question very simple.`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const result = await aiClient.responses.create({
+    model: "openai/gpt-oss-20b",
+    input: prompt,
+  });
+  const text = result.output_text || "";
   const data = parseJsonFromAi(text);
   const rawList = data?.questions || (Array.isArray(data) ? data : []);
   const questions = rawList
@@ -207,7 +214,7 @@ export const runCode = Asynchandler(async (req, res) => {
 
 /** POST /api/code-review - AI review of user code */
 export const codeReview = Asynchandler(async (req, res) => {
-  if (!genAI) throw new ApiError(503, "AI service not configured");
+  if (!aiClient) throw new ApiError(503, "AI service not configured (GROQ_API_KEY)");
   const { problemDescription, userCode } = req.body || {};
   if (!problemDescription || !userCode) throw new ApiError(400, "problemDescription and userCode required");
 
@@ -229,9 +236,11 @@ Return ONLY valid JSON (no markdown, no code fences):
   "edgeCasesMissed": ["edge case 1"]
 }`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const result = await aiClient.responses.create({
+    model: "openai/gpt-oss-20b",
+    input: prompt,
+  });
+  const text = result.output_text || "";
   const data = parseJsonFromAi(text) || {};
   const feedback = {
     quality: data.quality || "",
@@ -245,7 +254,7 @@ Return ONLY valid JSON (no markdown, no code fences):
 
 /** POST /api/follow-up - AI follow-up interview question */
 export const followUpQuestion = Asynchandler(async (req, res) => {
-  if (!genAI) throw new ApiError(503, "AI service not configured");
+  if (!aiClient) throw new ApiError(503, "AI service not configured (GROQ_API_KEY)");
   const { problemTitle, userCode, previousQuestions } = req.body || {};
   if (!problemTitle) throw new ApiError(400, "problemTitle required");
 
@@ -261,9 +270,11 @@ Generate ONE short interview follow-up question (1-2 sentences). Examples: "Why 
 
 Return ONLY a plain text question, no JSON, no quotes.`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const result = await model.generateContent(prompt);
-  const question = result.response.text().trim();
+  const result = await aiClient.responses.create({
+    model: "openai/gpt-oss-20b",
+    input: prompt,
+  });
+  const question = (result.output_text || "").trim();
 
   return res.status(200).json(new ApiResponse(200, { question }));
 });

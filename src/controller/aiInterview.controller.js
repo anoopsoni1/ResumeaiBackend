@@ -1,10 +1,15 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { VideocallInterview } from "../models/VideocallInterview.model.js";
 
-const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+const aiClient = process.env.GROQ_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    })
+  : null;
 
 const INTERVIEW_DURATION_MINUTES = 15;
 
@@ -22,9 +27,7 @@ export const getNextAiQuestion = Asynchandler(async (req, res) => {
   if (!interview) throw new ApiError(404, "Interview not found");
 
   const role = interview.role || "Software Engineer";
-  if (!genAI) throw new ApiError(503, "AI service not configured (GEMINI_API_KEY)");
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  if (!aiClient) throw new ApiError(503, "AI service not configured (GROQ_API_KEY)");
   const context = Array.isArray(previousQuestions) && previousQuestions.length > 0
     ? `Previous questions asked:\n${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}\n\nGenerate the NEXT single question only.`
     : "Generate the FIRST interview question only.";
@@ -42,10 +45,13 @@ Rules:
 
   let question;
   try {
-    const result = await model.generateContent(prompt);
-    question = result.response.text().trim();
+    const result = await aiClient.responses.create({
+      model: "openai/gpt-oss-20b",
+      input: prompt,
+    });
+    question = (result.output_text || "").trim();
   } catch (err) {
-    console.error("[getNextAiQuestion] Gemini fetch failed:", err?.message || err);
+    console.error("[getNextAiQuestion] AI fetch failed:", err?.message || err);
     const isFirst = !Array.isArray(previousQuestions) || previousQuestions.length === 0;
     question = isFirst
       ? `Tell me about yourself and your experience relevant to the ${role} role.`

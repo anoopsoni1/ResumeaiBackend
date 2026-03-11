@@ -15,16 +15,15 @@ const userschema = new mongoose.Schema({
         required : true ,
         unique : true ,
       } ,
+      googleId : {
+        type : String ,
+        sparse : true ,
+        unique : true ,
+      } ,
       password : {
         type : String ,
-        required : [true, "Password is required"],
+        required : false ,
         minlength : [8, "Password must be at least 8 characters"],
-        validate : {
-          validator : function (v) {
-            return /^(?=.*[a-zA-Z])(?=.*\d).+$/.test(v);
-          },
-          message : "Password must contain at least one letter and one number",
-        },
       }, 
       Premium : {
         type : Boolean ,
@@ -44,7 +43,7 @@ const userschema = new mongoose.Schema({
 
 // Promise-based hook (avoids "next is not a function" issues)
 userschema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+  if (!this.isModified("password") || !this.password || this.password.length === 0) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 

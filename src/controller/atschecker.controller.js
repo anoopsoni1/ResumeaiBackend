@@ -1,11 +1,14 @@
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 
 dotenv.config();
 
-const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
 const CheckATSScore = Asynchandler(async (req, res) => {
   const { resumeText, jobDescription } = req.body;
@@ -54,20 +57,13 @@ RESUME:
 ${resumeText}
 `;
 
-    const result = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
+    const response = await client.responses.create({
+      model: "openai/gpt-oss-20b",
+      input: prompt,
     });
 
-    let raw =
-      result.text ??
-      result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") ??
-      "";
+    // Groq OpenAI-compatible client helper
+    let raw = response.output_text || "";
 
     raw = raw.replace(/```json/g, "").replace(/```/g, "").trim();
 

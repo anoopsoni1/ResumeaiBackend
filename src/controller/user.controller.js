@@ -285,4 +285,5 @@ export {
     verifyForgotOtp,
     resetPasswordAfterOtp,
     getallusers,
+    generateAccessAndRefereshTokens,
 }
