@@ -1,13 +1,8 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from "axios";
 import { VideocallInterview } from "../models/VideocallInterview.model.js";
 
-const aiClient = process.env.GROQ_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: "https://api.groq.com/openai/v1",
-    })
-  : null;
+const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 /** Download recording from URL, transcribe with Gemini, evaluate transcript, save to interview. */
 export async function processInterviewRecording(interviewId) {
@@ -15,24 +10,26 @@ export async function processInterviewRecording(interviewId) {
   if (!interview || !interview.recordingUrl) {
     return;
   }
-  if (!aiClient) {
+  if (!genAI) {
     await VideocallInterview.findByIdAndUpdate(interviewId, { status: "completed" });
     return;
   }
   try {
     const response = await axios.get(interview.recordingUrl, { responseType: "arraybuffer" });
     const buffer = Buffer.from(response.data);
-    const base64 = buffer.toString("base64");
+    const mimeType = (response.headers["content-type"] || "video/mp4").split(";")[0].trim();
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Groq/OpenAI client does not support direct video transcription via responses API,
-    // so pass a description and base64 placeholder for now.
-    const transcriptPrompt = `You are given a base64-encoded interview recording. The raw bytes (truncated) are:\n${base64.slice(0, 4000)}\n\nYou cannot actually decode audio, so instead, output a short placeholder transcript like "Transcript not available; audio processing not implemented yet."`;
-
-    const transcriptResult = await aiClient.responses.create({
-      model: "openai/gpt-oss-20b",
-      input: transcriptPrompt,
-    });
-    const transcript = transcriptResult.output_text || "";
+    const transcriptResult = await model.generateContent([
+      {
+        inlineData: {
+          data: buffer.toString("base64"),
+          mimeType: mimeType.includes("video") ? mimeType : "audio/webm",
+        },
+      },
+      "Transcribe this interview recording accurately. Include both interviewer and candidate speech.",
+    ]);
+    const transcript = transcriptResult.response.text();
 
     const evalPrompt = `You are a senior technical interviewer with 15+ years of experience. Evaluate the interview transcript STRICTLY and give scores only based on evidence in the transcript.
 
@@ -53,17 +50,14 @@ ${transcript}
 Return ONLY valid JSON. No markdown, no code fence, no explanation. Example shape:
 {"technicalScore":7,"communicationScore":8,"confidenceScore":6,"strengths":["Clear API experience","Structured answers"],"weaknesses":["Could add more examples"],"improvementPlan":["Practice STAR format","Add metrics to answers"]}`;
 
-    const evalResult = await aiClient.responses.create({
-      model: "openai/gpt-oss-20b",
-      input: evalPrompt,
-    });
-    let text = evalResult.output_text || "";
+    const evalResult = await model.generateContent(evalPrompt);
+    let text = evalResult.response.text();
     text = text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
     let aiReport;
     try {
       aiReport = JSON.parse(text);
     } catch (parseErr) {
-      console.error("[processInterviewRecording] Invalid JSON from AI", interviewId, text?.slice(0, 200));
+      console.error("[processInterviewRecording] Invalid JSON from Gemini", interviewId, text?.slice(0, 200));
       throw parseErr;
     }
 

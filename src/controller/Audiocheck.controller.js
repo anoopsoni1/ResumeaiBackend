@@ -1,22 +1,17 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 
-const aiClient = process.env.GROQ_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: "https://api.groq.com/openai/v1",
-    })
-  : null;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const evaluateInterview = Asynchandler(async (req, res) => {
   const transcript = req.body.transcript;
   if (!transcript) {
     return res.status(400).json(new ApiResponse(400, null, "Transcript is required"));
   }
-  if (!aiClient) {
-    return res.status(503).json(new ApiResponse(503, null, "AI service not configured (GROQ_API_KEY)"));
-  }
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+  });
 
   const prompt = `
 You are a senior technical interviewer with 15+ years of experience.
@@ -42,12 +37,9 @@ Do not include explanation.
 Only JSON.
 `;
 
-  const result = await aiClient.responses.create({
-    model: "openai/gpt-oss-20b",
-    input: prompt,
-  });
+  const result = await model.generateContent(prompt);
 
-  const text = result.output_text || "";
+  const text = result.response.text();
 
   const cleaned = text.replace(/```json|```/g, "").trim();
 

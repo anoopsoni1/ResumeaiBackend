@@ -1,14 +1,9 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from "axios";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 
-const aiClient = process.env.GROQ_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: "https://api.groq.com/openai/v1",
-    })
-  : null;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /** Transcribe audio/video from URL (e.g. Cloudinary). Body: { audioUrl: string } */
 export const transcribeAudio = Asynchandler(async (req, res) => {
@@ -18,17 +13,17 @@ export const transcribeAudio = Asynchandler(async (req, res) => {
   }
   const response = await axios.get(audioUrl, { responseType: "arraybuffer" });
   const buffer = Buffer.from(response.data);
-  if (!aiClient) {
-    return res.status(503).json(new ApiResponse(503, null, "AI service not configured (GROQ_API_KEY)"));
-  }
-
-  const base64 = buffer.toString("base64");
-  const prompt = `You are given a base64-encoded interview recording. The raw bytes (truncated) are:\n${base64.slice(0, 4000)}\n\nYou cannot actually decode audio, so instead, output a short placeholder transcript like "Transcript not available; audio processing not implemented yet."`;
-
-  const result = await aiClient.responses.create({
-    model: "openai/gpt-oss-20b",
-    input: prompt,
-  });
-  const text = result.output_text || "";
-  return res.json(new ApiResponse(200, text, "Audio transcribed (placeholder) successfully"));
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const mimeType = (response.headers["content-type"] || "video/mp4").split(";")[0].trim();
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        data: buffer.toString("base64"),
+        mimeType: mimeType.includes("video") ? mimeType : "audio/webm",
+      },
+    },
+    "Transcribe this interview recording accurately. Include both interviewer and candidate speech.",
+  ]);
+  const text = result.response.text();
+  return res.json(new ApiResponse(200, text, "Audio transcribed successfully"));
 });
