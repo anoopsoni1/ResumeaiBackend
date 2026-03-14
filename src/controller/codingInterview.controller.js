@@ -55,7 +55,7 @@ Return ONLY valid JSON (no markdown, no code fences):
 {
   "title": "string",
   "description": "string",
-  "dataStructure": "string (e.g. Array, String, Hash Map, Tree, Graph - one primary structure)",
+  "dataStructure": "string (e.g. Array, String, Hash Map, Tree,stack , queue ,linkedlist, Graph - one primary structure)",
   "algorithm": "string (e.g. Two Pointers, Sliding Window, Binary Search, BFS/DFS - one primary approach)",
   "examples": [{"input": "string", "output": "string"}],
   "constraints": ["string"],
@@ -119,7 +119,11 @@ Return ONLY valid JSON (no markdown, no code fences):
     }
   ]
 }
-Each question must be unique. Include 2-4 test cases per question. For Beginner keep each question very simple.`;
+Each question must be unique. Include 2-4 test cases per question. For Beginner keep each question very simple.
+ Give me full question description and examples and constraints and test cases.
+ Give me Input property and Expected Output properly formatted.
+`;
+
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const result = await model.generateContent(prompt);
