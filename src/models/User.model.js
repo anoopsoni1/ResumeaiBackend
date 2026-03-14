@@ -33,6 +33,29 @@ const userschema = new mongoose.Schema({
         type : Boolean ,
         default : false ,
       },
+      plan : {
+        type : String ,
+        enum : [ "free", "premium" ],
+        default : "free",
+      },
+   
+      resumesDownloadedToday : {
+        type : Number ,
+        default : 0 ,
+      },
+      lastResumeDownloadDate : {
+        type : Date ,
+        default : null ,
+      },
+      // Premium: 5 live interviews per day
+      liveInterviewsToday : { type : Number , default : 0 },
+      lastLiveInterviewDate : { type : Date , default : null },
+      // Premium: 5 coding interviews per day
+      codingInterviewsToday : { type : Number , default : 0 },
+      lastCodingInterviewDate : { type : Date , default : null },
+      // Premium: 15 roadmap suggestions per day
+      roadmapSuggestionsToday : { type : Number , default : 0 },
+      lastRoadmapSuggestionDate : { type : Date , default : null },
        refreshtoken : {
         type : String 
        },

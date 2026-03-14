@@ -8,7 +8,7 @@ import { Payment, VerifyPayment } from "../controller/payment.controller.js";
  import { verifyJWT, requireAdmin } from "../middleware/auth.middleware.js";
  import { uploadAudioToCloudinary } from "../utils/Cloudinary.js";
  import Mail from "../controller/email.controller.js";
- import { makePremium, makeAdmin, forgotPassword, verifyForgotOtp, resetPasswordAfterOtp, getallusers, updateAccountDetails } from "../controller/user.controller.js";
+ import { makePremium, makeAdmin, forgotPassword, verifyForgotOtp, resetPasswordAfterOtp, getallusers, getResumeStats, updateAccountDetails } from "../controller/user.controller.js";
  import {
     createTemplate,
     getTemplates,
@@ -25,6 +25,17 @@ import { createDetail, getDetail, updateDetail, deleteDetail } from "../controll
 import { getEditedResume, saveEditedResume } from "../controller/editedResume.controller.js";
 import { deployPortfolio, getDeployments, deleteDeployment } from "../controller/deployment.controller.js";
 import { generateRoadmap } from "../controller/roadmap.controller.js";
+import { recordResumeDownload } from "../controller/resume.controller.js";
+import {
+  downloadResumeRateLimit,
+  loginAndRegisterRateLimit,
+} from "../middleware/resumeGenerateRateLimit.middleware.js";
+import { checkResumeDownloadLimit } from "../middleware/checkResumeDownloadLimit.middleware.js";
+import {
+  checkLiveInterviewLimit,
+  checkCodingInterviewLimit,
+  checkRoadmapLimit,
+} from "../middleware/checkInterviewAndRoadmapLimit.middleware.js";
 import {
   generateQuestion,
   generateQuestions,
@@ -39,8 +50,8 @@ import {
 } from "../controller/codingInterview.controller.js";
 const router = Router()
 
-router.route("/register").post(parseFormData , registeruser)
-router.route("/login").post(parseFormData , loginuser)
+router.route("/register").post(parseFormData , loginAndRegisterRateLimit,registeruser)
+router.route("/login").post(parseFormData , loginAndRegisterRateLimit, loginuser)
 router.route("/logout").post(logoutUser)
 router.route("/profile").get(verifyJWT, getCurrentUser).patch(verifyJWT, updateAccountDetails) 
 router.route("/atscheck").post(verifyJWT,CheckATSScore)
@@ -58,6 +69,7 @@ router.route("/forgot-password").post(forgotPassword)
 router.route("/verify-forgot-otp").post(verifyForgotOtp)
 router.route("/reset-password").post(resetPasswordAfterOtp)
 router.route("/get-all-users").get(verifyJWT, requireAdmin, getallusers)
+router.route("/get-resume-stats").get(verifyJWT, getResumeStats)
 router.route("/create-atsscore").post(verifyJWT, createAtsscore)
 router.route("/get-atsscore").get(verifyJWT, getAtsscore)
 router.route("/update-atsscore/:id").put(verifyJWT, updateAtsscore)
@@ -66,7 +78,10 @@ router.route("/get-optimize").get(verifyJWT, getOptimize)
 router.route("/increment-optimize").post(verifyJWT, incrementOptimize)
 router.route("/update-optimize/:id").put(verifyJWT, updateOptimize)
 router.route("/upload-audio").post(upload.single("audio"), uploadAudioToCloudinary)
-router.route("/interviews").post(verifyJWT, createInterview).get(verifyJWT, getMyInterviews)
+router
+  .route("/interviews")
+  .post(verifyJWT, checkLiveInterviewLimit, createInterview)
+  .get(verifyJWT, getMyInterviews)
 router.route("/interviews/:id").get(verifyJWT, getInterviewById).put(verifyJWT, updateInterview)
 router.route("/interviews/:id/upload-recording").post(verifyJWT, multerRecording.single("recording"), uploadRecording)
 router.route("/interviews/:id/ai-question").post(verifyJWT, getNextAiQuestion)
@@ -76,12 +91,18 @@ router.route("/create-detail").post(verifyJWT, createDetail)
 router.route("/get-detail").get(verifyJWT, getDetail)
 router.route("/update-detail/:id").put(verifyJWT, updateDetail)
 router.route("/delete-detail/:id").delete(verifyJWT, deleteDetail)
+// router.route("/resume/generate").post(verifyJWT, resumeGenerateRateLimit, checkResumeLimit, createResume)
+router
+  .route("/record-resume-download")
+  .post(verifyJWT, downloadResumeRateLimit, checkResumeDownloadLimit, recordResumeDownload);
 router.route("/get-edited-resume").get(verifyJWT, getEditedResume)
 router.route("/save-edited-resume").post(verifyJWT, saveEditedResume)
 router.route("/deploy-portfolio").post(verifyJWT, deployPortfolio)
 router.route("/get-deployments").get(verifyJWT, getDeployments)
 router.route("/delete-deployment/:id").delete(verifyJWT, deleteDeployment)
-router.route("/generate-roadmap").post(generateRoadmap)
+router
+  .route("/generate-roadmap")
+  .post(verifyJWT, checkRoadmapLimit, generateRoadmap)
 // coding interview: question/run/review (no auth), save/crud (auth)
 router.route("/interview-question").post(generateQuestion)
 router.route("/interview-questions").post(generateQuestions)
@@ -89,7 +110,9 @@ router.route("/run-code").post(runCode)
 router.route("/code-review").post(codeReview)
 router.route("/follow-up").post(followUpQuestion)
 router.route("/leaderboard").get(getLeaderboard)
-router.route("/coding-interview").post(createCodingInterview)
+router
+  .route("/coding-interview")
+  .post(verifyJWT, checkCodingInterviewLimit, createCodingInterview)
 router.route("/get-coding-interview").get(getCodingInterviews)
 router.route("/update-coding-interview/:id").put( updateCodingInterview)
 router.route("/delete-coding-interview/:id").delete(deleteCodingInterview)

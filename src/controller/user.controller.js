@@ -268,10 +268,29 @@ const getallusers = Asynchandler(async(req, res) => {
         ...u,
         optimizeCount: optimizeByUser[String(u._id)] ?? 0,
         resumeCount: resumeByUser[String(u._id)] ?? 0,
+        downloadCount: u.resumesDownloadedToday ?? 0,
+        liveInterviewsToday: u.liveInterviewsToday ?? 0,
+        codingInterviewsToday: u.codingInterviewsToday ?? 0,
+        roadmapSuggestionsToday: u.roadmapSuggestionsToday ?? 0,
     }));
     return res.status(200).json(new ApiResponse(200, usersWithStats, "All users fetched successfully"));
 });
 
+/** Get current user's resume generation and download stats (for dashboard). */
+const getResumeStats = Asynchandler(async (req, res) => {
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await User.findById(userId)
+        .select("resumesGeneratedToday lastResumeDate resumesDownloadedToday lastResumeDownloadDate")
+        .lean();
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json(
+        new ApiResponse(200, {
+            resumesGeneratedToday: user.resumesGeneratedToday ?? 0,
+            resumesDownloadedToday: user.resumesDownloadedToday ?? 0,
+        }, "Resume stats fetched")
+    );
+});
 
 export {
     registeruser,
@@ -285,5 +304,6 @@ export {
     verifyForgotOtp,
     resetPasswordAfterOtp,
     getallusers,
+    getResumeStats,
     generateAccessAndRefereshTokens,
 }

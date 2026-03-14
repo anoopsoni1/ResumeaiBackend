@@ -3,6 +3,7 @@ import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { VideocallInterview } from "../models/VideocallInterview.model.js";
 import { User } from "../models/User.model.js";
+import { incrementDailyUserCount } from "../utils/dailyCount.js";
 
 // Create interview (recruiter schedules; candidateId or candidateEmail)
 const createInterview = Asynchandler(async (req, res) => {
@@ -28,6 +29,7 @@ const createInterview = Asynchandler(async (req, res) => {
     scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
     status: "scheduled",
   });
+  await incrementDailyUserCount(userId, "liveInterviewsToday", "lastLiveInterviewDate");
   const populated = await VideocallInterview.findById(interview._id)
     .populate("recruiterId", "FirstName LastName email")
     .populate("candidateId", "FirstName LastName email")

@@ -22,9 +22,11 @@ app.use(cookieParser());
 
 import { router } from "./routes/user.routes.js";
 import authRouter from "./routes/auth.routes.js";
+import resumeRouter from "./routes/resume.routes.js";
 // import { roadmapRouter } from "./routes/roadmap.routes.js";
 
 app.use("/api/v1/user", router);
 app.use("/api/v1/auth", authRouter);
+app.use("/api/resume", resumeRouter);
 
 export {app}

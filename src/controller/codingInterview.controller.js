@@ -3,7 +3,7 @@ import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { InterviewSession } from "../models/InterviewSession.model.js";
-import { User } from "../models/User.model.js";
+import { incrementDailyUserCount } from "../utils/dailyCount.js";
 
 const genAI = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -364,6 +364,7 @@ export const createCodingInterview = Asynchandler(async (req, res) => {
     status: body.status || "submitted",
     attempts: attempts.length > 0 ? attempts : undefined,
   });
+  await incrementDailyUserCount(userId, "codingInterviewsToday", "lastCodingInterviewDate");
   return res.status(201).json(new ApiResponse(201, session));
 });
 

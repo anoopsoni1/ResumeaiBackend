@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Asynchandler } from "../utils/Asynchandler.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 import { ApiError } from "../utils/ApiError.js";
+import { incrementDailyUserCount } from "../utils/dailyCount.js";
 
 const genAI = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -38,11 +39,14 @@ Return ONLY valid JSON in this exact shape (no markdown, no code fences, no extr
 }`;
 
 /**
- * POST /api/generate-roadmap
+ * POST /api/generate-roadmap (requires verifyJWT; premium only, 15/day)
  * Body: { careerGoal, skills, experience, months }
  */
 export const generateRoadmap = Asynchandler(async (req, res) => {
   if (!genAI) throw new ApiError(503, "AI service not configured (GEMINI_API_KEY)");
+
+  const userId = req.user?.id || req.user?._id;
+  if (!userId) throw new ApiError(401, "Unauthorized");
 
   const { careerGoal, skills, experience, months } = req.body || {};
 
@@ -101,6 +105,8 @@ Generate a practical, phased roadmap with 3-6 phases, 3-5 projects, missing skil
     missingSkills: Array.isArray(data.missingSkills) ? data.missingSkills : [],
     learningResources: Array.isArray(data.learningResources) ? data.learningResources : [],
   };
+
+  await incrementDailyUserCount(userId, "roadmapSuggestionsToday", "lastRoadmapSuggestionDate");
 
   return res
     .status(200)
