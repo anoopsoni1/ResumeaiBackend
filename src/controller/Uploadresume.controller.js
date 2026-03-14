@@ -126,6 +126,16 @@ function detailToResumeText(d) {
       lines.push("");
     });
   }
+  if (Array.isArray(d.references) && d.references.length > 0) {
+    const refs = d.references.map((r) => (r || "").trim()).filter(Boolean);
+    if (refs.length) {
+      lines.push("REFERENCES");
+      refs.forEach((r) => {
+        lines.push(r);
+        lines.push("");
+      });
+    }
+  }
   if (Array.isArray(d.projects) && d.projects.length > 0) {
     const projectTexts = d.projects.map((p) => (p || "").trim()).filter(Boolean);
     if (projectTexts.length) {
@@ -164,12 +174,13 @@ export const aiEditResume = Asynchandler(async (req, res) => {
 - role (string): job title / professional role
 - summary (string): professional summary (1–3 sentences)
 - skills (array of strings): list of skills, one per element
-- experience (array of strings): each element is one job entry as a single string with newlines, e.g. "Job Title\\nCompany Name\\n2020 – Present\\n• Bullet one\\n• Bullet two"
+- experience (array of strings): job history. If the resume has a section named "Work Experience", "WORK EXPERIENCE", "Employment", "Professional Experience", "Employment History", "Experience", or similar, extract all such entries and put them here. Use the key "experience" only. If the section only says "Fresher", "No experience", "Seeking first role", or similar, still include it as one entry (e.g. "Fresher" or "Aspiring professional seeking first opportunity"). Each element is one job entry as a single string with newlines, e.g. "Job Title\\nCompany Name\\n2020 – Present\\n• Bullet one\\n• Bullet two"
 - projects (array of strings): each element one project description (can include newlines)
 - education (string): education block
 - languageProficiency (string): languages
 - email (string): email address
 - phone (string): phone number
+- references (array of strings, optional): each element is one reference entry, e.g. "Name\\nTitle, Company\\nEmail / Phone". If the resume has no references section, return an empty array or omit this key.
 
 Rules: Preserve all factual content. Fix grammar and spelling. Quantify impact where possible. Use strong action verbs. Return ONLY valid JSON. All string values must be properly escaped (e.g. newlines as \\n, quotes escaped).
 
@@ -209,6 +220,9 @@ ${resumeText}`;
       languageProficiency: parsed.languageProficiency != null ? String(parsed.languageProficiency).trim() : "",
       email: parsed.email != null ? String(parsed.email).trim() : "",
       phone: parsed.phone != null ? String(parsed.phone).trim() : "",
+      references: Array.isArray(parsed.references)
+        ? parsed.references.map((r) => (r != null ? String(r).trim() : "")).filter(Boolean)
+        : [],
     };
   } catch (e) {
     console.error("Gemini optimize JSON parse error:", e, raw?.slice(0, 300));
@@ -257,7 +271,7 @@ export const exportResume = Asynchandler(async (req, res) => {
         return;
       }
 
-      if (["SUMMARY","SKILLS","EXPERIENCE","EDUCATION","PROJECTS"].includes(line.toUpperCase())) {
+      if (["SUMMARY","SKILLS","EXPERIENCE","EDUCATION","PROJECTS","REFERENCES"].includes(line.toUpperCase())) {
         children.push(new Paragraph({
           spacing: { before: 300 },
           children: [new TextRun({ text: line, bold: true, size: config.heading })],
@@ -302,7 +316,7 @@ export const exportResume = Asynchandler(async (req, res) => {
         return;
       }
 
-      if (["SUMMARY","SKILLS","EXPERIENCE","EDUCATION","PROJECTS"].includes(line.toUpperCase())) {
+      if (["SUMMARY","SKILLS","EXPERIENCE","EDUCATION","PROJECTS","REFERENCES"].includes(line.toUpperCase())) {
         doc.moveDown().fontSize(14).text(line, { underline: true });
         return;
       }
