@@ -55,6 +55,18 @@ const getOptimize = Asynchandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, optimize, "Optimize fetched successfully"));
 });
 
+// Increment optimize count by 1 (called each time user uses "Optimize with AI").
+const incrementOptimize = Asynchandler(async (req, res) => {
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const optimize = await Optimize.findOneAndUpdate(
+        { userId },
+        { $inc: { number: 1 } },
+        { new: true, upsert: true }
+    );
+    return res.status(200).json(new ApiResponse(200, optimize, "Optimize count incremented"));
+});
+
 const updateOptimize = Asynchandler(async (req, res) => {
     const { id } = req.params;
     const { number } = req.body;
@@ -65,4 +77,4 @@ const updateOptimize = Asynchandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, updated, "Optimize updated successfully"));
 });
 
-export { createAtsscore, getAtsscore, updateAtsscore, createOptimize, getOptimize, updateOptimize };
+export { createAtsscore, getAtsscore, updateAtsscore, createOptimize, getOptimize, updateOptimize, incrementOptimize };

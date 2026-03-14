@@ -15,7 +15,7 @@ import { Payment, VerifyPayment } from "../controller/payment.controller.js";
     getTemplateById,
     deleteTemplate,
   } from "../controller/template.controller.js";
-import { createAtsscore, getAtsscore, updateAtsscore, createOptimize, getOptimize, updateOptimize } from "../controller/atsscore.controller.js";
+import { createAtsscore, getAtsscore, updateAtsscore, createOptimize, getOptimize, updateOptimize, incrementOptimize } from "../controller/atsscore.controller.js";
 import { createInterview, getMyInterviews, getInterviewById, updateInterview } from "../controller/videocallInterview.controller.js";
 import { uploadRecording } from "../middleware/audio.middleware.js";
 import { getNextAiQuestion } from "../controller/aiInterview.controller.js";
@@ -63,6 +63,7 @@ router.route("/get-atsscore").get(verifyJWT, getAtsscore)
 router.route("/update-atsscore/:id").put(verifyJWT, updateAtsscore)
 router.route("/create-optimize").post(verifyJWT, createOptimize)
 router.route("/get-optimize").get(verifyJWT, getOptimize)
+router.route("/increment-optimize").post(verifyJWT, incrementOptimize)
 router.route("/update-optimize/:id").put(verifyJWT, updateOptimize)
 router.route("/upload-audio").post(upload.single("audio"), uploadAudioToCloudinary)
 router.route("/interviews").post(verifyJWT, createInterview).get(verifyJWT, getMyInterviews)
